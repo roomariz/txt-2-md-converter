@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  txt2md-converter:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # Optional: Mount a local directory for easier file conversion testing
+      # - ./input:/app/input
+      # - ./output:/app/output
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
