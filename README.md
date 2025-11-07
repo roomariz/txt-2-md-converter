@@ -1,46 +1,151 @@
-# Getting Started with Create React App
+# Txt2MD Converter
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Convert text and Word documents to Markdown with preserved formatting. This web-based tool maintains the structure of your documents, including headings, subheadings, and bullet points, ensuring that your converted Markdown files look exactly as intended.
 
-## Available Scripts
+## 🎯 Features
 
-In the project directory, you can run:
+- **Preserved Formatting**: Converts DOCX files while maintaining headings, subheadings, and bullet points
+- **Multi-format Support**: Handles both text files (.txt) and Word documents (.docx)
+- **Drag & Drop Interface**: Intuitive file upload with drag and drop functionality
+- **Batch Processing**: Convert multiple files at once with ZIP download
+- **Real-time Preview**: See your Markdown output before downloading
+- **YAML Frontmatter**: Automatically adds metadata to converted files
 
-### `npm start`
+## 🚀 Quick Start
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Prerequisites
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- Node.js (version 14 or later)
+- npm or yarn package manager
 
-### `npm test`
+### Installation
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/roomariz/txt-2-md-converter.git
+   cd txt-2-md-converter
+   ```
 
-### `npm run build`
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. **Start the development server**
+   ```bash
+   npm start
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. **Open your browser** and visit `http://localhost:3000`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 📖 Usage
 
-### `npm run eject`
+### Single File Conversion
+1. Drag and drop your .txt or .docx file onto the upload area
+2. Wait for the conversion to complete
+3. Review the Markdown preview
+4. Click "Download Current Markdown" to save your file
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Batch Processing
+1. Click "Select Files" to choose multiple files
+2. Each file will be processed individually
+3. Click "Download All as ZIP" to download all converted files
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### File Support
+- **Text Files**: `.txt` files with basic formatting detection
+- **Word Documents**: `.docx` files with preserved formatting (headings, lists, etc.)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## 🛠️ How It Works
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+The converter uses different approaches based on file type:
 
-## Learn More
+- **For .docx files**: Uses `mammoth.js` to preserve the original document structure, then converts HTML to Markdown using `turndown`
+- **For .txt files**: Applies pattern matching to detect headings, lists, and other formatting elements
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 🤝 Contributing
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make your changes**
+4. **Test your changes**
+5. **Commit your changes**: `git commit -m 'Add amazing feature'`
+6. **Push to the branch**: `git push origin feature/amazing-feature`
+7. **Open a Pull Request**
+
+### Development Setup
+1. Install dependencies: `npm install`
+2. Start development server: `npm start`
+3. The app will automatically open in your browser at `http://localhost:3000`
+
+### Project Structure
+```
+txt2md-converter/
+├── public/              # Static assets
+├── src/
+│   ├── components/      # React components
+│   ├── App.tsx          # Main application logic
+│   └── ...              # Other source files
+├── package.json         # Dependencies and scripts
+└── README.md           # This file
+```
+
+## 📝 API Reference
+
+### Supported File Types
+- `text/plain`: .txt files
+- `application/msword`: .doc files
+- `application/vnd.openxmlformats-officedocument.wordprocessingml.document`: .docx files
+
+### Output Format
+The converter produces standard Markdown with optional YAML frontmatter containing:
+- `converted: true`
+- `date: YYYY-MM-DD` (conversion date)
+
+## 🔧 Troubleshooting
+
+### Common Issues
+1. **File upload not working**: Make sure your file format is supported (.txt, .doc, .docx)
+2. **Formatting not preserved**: Complex Word formatting might not translate perfectly to Markdown
+3. **Large files**: Very large files might take longer to process
+
+### Known Limitations
+- Complex table formats in Word documents may not convert perfectly
+- Some advanced formatting (text boxes, special fonts) won't be preserved
+- Images are extracted as separate elements in Markdown
+
+## 🎨 Customization
+
+### Modifying Conversion Behavior
+Edit `src/App.tsx` to change how different formatting elements are detected and converted.
+
+### Adding New File Types
+Update the file type detection in `useDropzone` configuration and add appropriate conversion functions.
+
+## 📋 Version History
+
+### 0.1.0
+- Initial release with text and DOCX conversion capabilities
+- Preserved formatting for Word documents
+- Drag & drop interface
+- Batch processing support
+
+## 🤝 Support
+
+If you encounter any issues or have questions:
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Search existing [Issues](https://github.com/roomariz/txt-2-md-converter/issues)
+3. Create a new issue with detailed information about your problem
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## ⭐ Show Your Support
+
+If this tool helped you, please give it a star on GitHub and consider contributing to the project!
+
+---
+
+<div align="center">
+Made with ❤️ for the community
+</div>
