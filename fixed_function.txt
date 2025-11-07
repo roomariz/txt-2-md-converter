@@ -1,0 +1,122 @@
+  const convertToMarkdown = (text: string): string => {
+    // Add metadata at the top
+    let markdown = `---
+converted: true
+date: ${new Date().toISOString().split('T')[0]}
+---
+
+`;
+
+    const lines = text.split('\n');
+    let inCodeBlock = false;
+    let codeBlockContent = '';
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+
+      // Check if it's the first non-empty line and use it as a heading
+      if (i === 0 && trimmedLine) {
+        markdown += `# ${trimmedLine}\n\n`;
+        i++;
+        continue;
+      }
+
+      // Skip completely empty lines but preserve paragraph breaks
+      if (!trimmedLine) {
+        if (inCodeBlock) {
+          codeBlockContent += '\n';
+        } else {
+          markdown += '\n';
+        }
+        i++;
+        continue;
+      }
+
+      // Detect code blocks (indented with 4+ spaces or tabs)
+      if ((line.startsWith('    ') || line.startsWith('\t')) && !inCodeBlock) {
+        inCodeBlock = true;
+        codeBlockContent = line.replace(/^\t/, '    ').replace(/^    /, '');
+        i++;
+        continue;
+      }
+
+      if (inCodeBlock) {
+        if (line.startsWith('    ') || line.startsWith('\t')) {
+          codeBlockContent += '\n' + line.replace(/^\t/, '    ').replace(/^    /, '');
+          i++;
+          continue;
+        } else {
+          markdown += '```\n' + codeBlockContent + '\n```\n\n';
+          inCodeBlock = false;
+          codeBlockContent = '';
+          // Don't increment i, process the current line again without the code block context
+          continue;
+        }
+      }
+
+      // Detect and handle numbered lists (e.g., "1. text", "2. text", etc.)
+      const numberedListItem = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
+      if (numberedListItem) {
+        markdown += `${numberedListItem[1]}. ${numberedListItem[2]}\n`;
+        i++;
+        continue;
+      }
+
+      // Detect and handle bullet points
+      const bulletPoint = trimmedLine.match(/^[-*+]\s+(.+)$/);
+      if (bulletPoint) {
+        markdown += `* ${bulletPoint[1]}\n`;
+        i++;
+        continue;
+      }
+
+      // Detect potential heading patterns (all caps, short lines, or lines ending with colons)
+      if (
+        (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length < 100 && !trimmedLine.includes(' ')) ||
+        (trimmedLine.endsWith(':') && trimmedLine.length < 100)
+      ) {
+        markdown += `## ${trimmedLine}\n\n`;
+        i++;
+        continue;
+      }
+
+      // Handle lines that look like headings but aren't all caps
+      if (
+        trimmedLine.length < 100 &&
+        /^[A-Z]/.test(trimmedLine) && 
+        !trimmedLine.includes('.') && 
+        !trimmedLine.startsWith('1. ') &&
+        !trimmedLine.startsWith('2. ') &&
+        !trimmedLine.startsWith('3. ') &&
+        !trimmedLine.startsWith('4. ') &&
+        !trimmedLine.startsWith('5. ') &&
+        !trimmedLine.startsWith('6. ') &&
+        !trimmedLine.startsWith('7. ') &&
+        !trimmedLine.startsWith('8. ') &&
+        !trimmedLine.startsWith('9. ') &&
+        !trimmedLine.startsWith('* ') &&
+        !trimmedLine.startsWith('- ') &&
+        !trimmedLine.startsWith('+ ')
+      ) {
+        markdown += `## ${trimmedLine}\n\n`;
+        i++;
+        continue;
+      }
+
+      // Add regular text paragraphs
+      markdown += trimmedLine + '\n';
+      i++;
+    }
+
+    // Close any remaining code block
+    if (inCodeBlock) {
+      markdown += '```\n' + codeBlockContent + '\n```\n';
+    }
+
+    // Final cleanup: remove any duplicate newlines
+    markdown = markdown.replace(/\n{3,}/g, '\n\n');
+    
+    return markdown;
+  };

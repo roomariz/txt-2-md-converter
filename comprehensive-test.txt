@@ -1,0 +1,42 @@
+# Introduction to Markdown Conversion
+
+This document demonstrates various text patterns that the Txt2MD converter should handle.
+
+## Numbered Lists
+1. First item in the list
+2. Second item continues
+3. Third item in the sequence
+
+## Unordered Lists
+- First bullet point
+- Second bullet point
+- Third bullet point
+
+## Code Blocks
+Here is some code:
+    function example() {
+        console.log("This is a code example");
+        return true;
+    }
+
+## Mixed Content
+Here is a paragraph with text that should be preserved as normal text. The converter should not modify regular sentences.
+
+NEXT HEADING
+
+This shows a heading that is in all caps.
+
+- Final list
+- To test
+- Multiple patterns
+
+1. Final numbered
+2. List to
+3. Complete testing
+
+    // More code example
+    for (let i = 0; i < 10; i++) {
+        console.log(i);
+    }
+
+End of document.
