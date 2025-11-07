@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import MarkdownPreview from './components/MarkdownPreview';
 import JSZip from 'jszip';
 import * as mammoth from 'mammoth';
+import TurndownService from 'turndown';
 import './App.css';
 
 const App: React.FC = () => {
@@ -11,92 +12,144 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const convertDocxToText = useCallback(async (file: File): Promise<string> => {
+  const convertDocxToMarkdown = useCallback(async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
-  }, []);
-
-  const convertToMarkdown = useCallback((text: string): string => {
-    // Add metadata at the top
-    let markdown = `---
+    
+    // Use mammoth to convert DOCX to HTML, preserving formatting
+    const result = await mammoth.convertToHtml({ arrayBuffer });
+    
+    // Use turndown to convert the HTML to Markdown
+    const turndownService = new TurndownService({
+      headingStyle: 'atx',  // Use # for headings
+      hr: '---',
+      bulletListMarker: '*',
+      codeBlockStyle: 'fenced',
+      emDelimiter: '*',
+      strongDelimiter: '**',
+      linkStyle: 'inlined',
+      linkReferenceStyle: 'full'
+    });
+    
+    let markdown = turndownService.turndown(result.value);
+    
+    // Add metadata at the top (YAML frontmatter)
+    markdown = `---
 converted: true
 date: ${new Date().toISOString().split('T')[0]}
 ---
 
-`;
+${markdown}`;
+    
+    return markdown;
+  }, []);
 
+  const convertToMarkdown = useCallback((text: string): string => {
+    // Process text files to detect basic formatting patterns
     const lines = text.split('\n');
     let inCodeBlock = false;
     let codeBlockContent = '';
+    let i = 0;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+    let markdown = '';
 
-      // Check if it's the first line and capitalize it as a heading
-      if (i === 0 && line) {
-        markdown += `# ${line}\n\n`;
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+
+      // Skip completely empty lines but preserve paragraph breaks
+      if (!trimmedLine) {
+        if (inCodeBlock) {
+          codeBlockContent += '\n';
+        } else {
+          markdown += '\n';
+        }
+        i++;
         continue;
       }
 
       // Detect code blocks (indented with 4+ spaces or tabs)
-      if ((lines[i].startsWith('    ') || lines[i].startsWith('\t')) && !inCodeBlock) {
+      if ((line.startsWith('    ') || line.startsWith('\t')) && !inCodeBlock) {
         inCodeBlock = true;
-        codeBlockContent = lines[i].replace(/^\t/, '    ').replace(/^ {4}/, '');
+        codeBlockContent = line.replace(/^\t/, '    ').replace(/^    /, '');
+        i++;
         continue;
       }
 
       if (inCodeBlock) {
-        if (lines[i].startsWith('    ') || lines[i].startsWith('\t')) {
-          codeBlockContent += '\n' + lines[i].replace(/^\t/, '    ').replace(/^ {4}/, '');
+        if (line.startsWith('    ') || line.startsWith('\t')) {
+          codeBlockContent += '\n' + line.replace(/^\t/, '    ').replace(/^    /, '');
+          i++;
           continue;
         } else {
           markdown += '```\n' + codeBlockContent + '\n```\n\n';
           inCodeBlock = false;
           codeBlockContent = '';
+          // Don't increment i, process the current line again without the code block context
+          continue;
         }
       }
 
-      // Detect numbered lists properly - preserve original numbers
-      if (/^\d+\.\s/.test(line)) {
-        markdown += line + '\n';
+      // Detect and handle numbered lists (e.g., "1. text", "2. text", etc.)
+      const numberedListItem = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
+      if (numberedListItem) {
+        markdown += `${numberedListItem[1]}. ${numberedListItem[2]}\n`;
+        i++;
         continue;
       }
 
-      // Detect bullet points
-      if (/^[-*+]\s/.test(line)) {
-        markdown += line.replace(/^[-*+]\s/, '* ') + '\n';
+      // Detect and handle bullet points
+      const bulletPoint = trimmedLine.match(/^[-*+]\s+(.+)$/);
+      if (bulletPoint) {
+        markdown += `* ${bulletPoint[1]}\n`;
+        i++;
         continue;
       }
 
-      // Skip lines that are clearly part of a numbered list (to avoid creating empty headings)
-      if (/^\d+\.\s/.test(line)) {
-        markdown += line + '\n';
+      // Detect potential heading patterns (all caps, short lines, or lines ending with colons)
+      if (
+        (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length < 100 && !trimmedLine.includes(' ')) ||
+        (trimmedLine.endsWith(':') && trimmedLine.length < 100)
+      ) {
+        markdown += `## ${trimmedLine}\n\n`;
+        i++;
         continue;
       }
 
-      // Detect headings (lines that look like headings - all caps or title case)
-      if (line === line.toUpperCase() && line.length < 100 && !line.includes(' ')) {
-        markdown += `## ${line}\n\n`;
+      // Handle lines that look like headings but aren't all caps
+      if (
+        trimmedLine.length < 100 &&
+        /^[A-Z]/.test(trimmedLine) &&
+        !trimmedLine.includes('.') &&
+        !trimmedLine.startsWith('1. ') &&
+        !trimmedLine.startsWith('2. ') &&
+        !trimmedLine.startsWith('3. ') &&
+        !trimmedLine.startsWith('4. ') &&
+        !trimmedLine.startsWith('5. ') &&
+        !trimmedLine.startsWith('6. ') &&
+        !trimmedLine.startsWith('7. ') &&
+        !trimmedLine.startsWith('8. ') &&
+        !trimmedLine.startsWith('9. ') &&
+        !trimmedLine.startsWith('* ') &&
+        !trimmedLine.startsWith('- ') &&
+        !trimmedLine.startsWith('+ ')
+      ) {
+        markdown += `## ${trimmedLine}\n\n`;
+        i++;
         continue;
       }
 
-      // Add paragraph break for empty lines - don't add extra newlines if we're already in a special state
-      if (line === '') {
-        if (i < lines.length - 1) { // Don't add extra newlines at the end
-          markdown += '\n';
-        }
-        continue;
-      }
-
-      // Add regular text
-      markdown += line + '\n';
+      // Add regular text paragraphs
+      markdown += trimmedLine + '\n';
+      i++;
     }
 
     // Close any remaining code block
     if (inCodeBlock) {
       markdown += '```\n' + codeBlockContent + '\n```\n';
     }
+
+    // Final cleanup: remove any duplicate newlines
+    markdown = markdown.replace(/\n{3,}/g, '\n\n');
 
     return markdown;
   }, []);
@@ -124,24 +177,32 @@ date: ${new Date().toISOString().split('T')[0]}
   const convertFile = useCallback(async (file: File) => {
     setIsLoading(true);
     try {
-      let text: string;
+      let markdown: string;
 
       if (file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        // Handle .doc and .docx files
-        text = await convertDocxToText(file);
+        // Handle .doc and .docx files - these are converted directly to markdown preserving formatting
+        markdown = await convertDocxToMarkdown(file);
       } else {
         // Handle .txt files
-        text = await file.text();
+        const text = await file.text();
+        let processedText = convertToMarkdown(text);
+        
+        // Add metadata at the top (YAML frontmatter) for text files
+        markdown = `---
+converted: true
+date: ${new Date().toISOString().split('T')[0]}
+---
+
+${processedText}`;
       }
 
-      const markdown = convertToMarkdown(text);
       setConvertedMarkdown(markdown);
     } catch (err) {
       setError('Failed to convert file: ' + (err as Error).message);
     } finally {
       setIsLoading(false);
     }
-  }, [convertToMarkdown, setError, setConvertedMarkdown, setIsLoading, convertDocxToText]);
+  }, [convertToMarkdown, setError, setConvertedMarkdown, setIsLoading, convertDocxToMarkdown]);
 
   const convertMultipleFiles = async () => {
     if (files.length === 0) return;
@@ -151,17 +212,25 @@ date: ${new Date().toISOString().split('T')[0]}
       const zip = new JSZip();
 
       for (const file of files) {
-        let text: string;
+        let markdown: string;
 
         if (file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-          // Handle .doc and .docx files
-          text = await convertDocxToText(file);
+          // Handle .doc and .docx files - these are converted directly to markdown preserving formatting
+          markdown = await convertDocxToMarkdown(file);
         } else {
           // Handle .txt files
-          text = await file.text();
+          const text = await file.text();
+          let processedText = convertToMarkdown(text);
+          
+          // Add metadata at the top (YAML frontmatter) for text files
+          markdown = `---
+converted: true
+date: ${new Date().toISOString().split('T')[0]}
+---
+
+${processedText}`;
         }
 
-        const markdown = convertToMarkdown(text);
         // Properly handle the file extension replacement for .doc and .docx files
         const baseName = file.name.replace(/\.(txt|docx?|rtf)$/i, '');
         const filename = `${baseName}.md`;
